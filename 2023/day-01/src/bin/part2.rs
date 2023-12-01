@@ -5,66 +5,43 @@ fn main() {
 }
 
 fn part2(input: &str) -> u32 {
-    let mut digits: Vec<u32> = Vec::new();
-
-    for line in input.lines().into_iter() {
-        let line_digits: Vec<u32> = parse(line);
-        digits.push(line_digits.first().unwrap() * 10);
-        digits.push(line_digits.last().unwrap() * 1);
-    }
-    digits.into_iter().reduce(|acc, d| acc + d).unwrap()
-}
-
-fn parse(line: &str) -> Vec<u32> {
-    let mut digits: Vec<u32> = Vec::new();
-
-    let line = line.trim();
-
-    let mut it = line.chars().enumerate();
-    while let Some((idx, char)) = it.next() {
-        if line.get(idx..).unwrap().starts_with("one") {
-            digits.push(1);
-            continue;
-        }
-        if line.get(idx..).unwrap().starts_with("two") {
-            digits.push(2);
-            continue;
-        }
-        if line.get(idx..).unwrap().starts_with("three") {
-            digits.push(3);
-            continue;
-        }
-        if line.get(idx..).unwrap().starts_with("four") {
-            digits.push(4);
-            continue;
-        }
-        if line.get(idx..).unwrap().starts_with("five") {
-            digits.push(5);
-            continue;
-        }
-        if line.get(idx..).unwrap().starts_with("six") {
-            digits.push(6);
-            continue;
-        }
-        if line.get(idx..).unwrap().starts_with("seven") {
-            digits.push(7);
-            continue;
-        }
-        if line.get(idx..).unwrap().starts_with("eight") {
-            digits.push(8);
-            continue;
-        }
-        if line.get(idx..).unwrap().starts_with("nine") {
-            digits.push(9);
-            continue;
-        }
-        if char.is_digit(10) {
-            digits.push(char.to_digit(10).unwrap());
-            continue;
-        }
-    }
-
-    digits
+    input
+        .lines()
+        .map(|line| {
+            let mut it = line.chars().enumerate().filter_map(|(i, c)| {
+                if let Some(d) = c.to_digit(10) {
+                    Some(d)
+                } else if (&line[i..]).starts_with("one") {
+                    Some(1)
+                } else if (&line[i..]).starts_with("two") {
+                    Some(2)
+                } else if (&line[i..]).starts_with("three") {
+                    Some(3)
+                } else if (&line[i..]).starts_with("four") {
+                    Some(4)
+                } else if (&line[i..]).starts_with("five") {
+                    Some(5)
+                } else if (&line[i..]).starts_with("six") {
+                    Some(6)
+                } else if (&line[i..]).starts_with("seven") {
+                    Some(7)
+                } else if (&line[i..]).starts_with("eight") {
+                    Some(8)
+                } else if (&line[i..]).starts_with("nine") {
+                    Some(9)
+                } else {
+                    None
+                }
+            });
+            let first = it.next().expect("There sould be at leas 1 number");
+            match it.last() {
+                Some(num) => first * 10 + num,
+                None => {
+                    first * 10 + first
+                }
+            }
+        })
+        .sum::<u32>()
 }
 
 #[cfg(test)]

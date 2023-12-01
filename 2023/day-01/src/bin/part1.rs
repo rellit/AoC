@@ -5,20 +5,19 @@ fn main() {
 }
 
 fn part1(input: &str) -> u32 {
-    let mut digits: Vec<u32> = Vec::new();
-
-    for line in input.lines().into_iter() {
-        let mut line_digits: Vec<u32> = Vec::new();
-        for c in line.chars() {
-            if c.is_numeric() {
-                line_digits.push(c.to_digit(10).unwrap())                
+    input
+        .lines()
+        .map(|line| {
+            let mut it = line.chars().filter_map(|c| c.to_digit(10));
+            let first = it.next().expect("There sould be at leas 1 number");
+            match it.last() {
+                Some(num) => first * 10 + num,
+                None => {
+                    first * 10 + first
+                }
             }
-        }
-        digits.push(line_digits.first().unwrap() * 10);
-        digits.push(line_digits.last().unwrap() * 1);
-    }
-
-    return digits.into_iter().reduce(|acc, d| acc + d).unwrap();
+        })
+        .sum::<u32>()
 }
 
 #[cfg(test)]
