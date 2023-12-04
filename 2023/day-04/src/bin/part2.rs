@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use nom::{
     bytes::complete::{tag, take_while1},
-    character::complete,
+    character::complete::{self, space1},
     multi::separated_list1,
     IResult,
 };
@@ -54,17 +54,17 @@ fn part2(input: &str) -> u32 {
 
 fn game(input: &str) -> IResult<&str, Game> {
     let (input, _) = tag("Card")(input)?;
-    let (input, _) = take_while1(|c: char| c.is_whitespace())(input)?;
+    let (input, _) = space1(input)?;
     let (input, game_id) = complete::u32(input)?;
     let (input, _) = tag(":")(input)?;
-    let (input, _) = take_while1(|c: char| c.is_whitespace())(input)?;
+    let (input, _) = space1(input)?;
     let (input, winning) =
-        separated_list1(take_while1(|c: char| c.is_whitespace()), complete::u32)(input)?;
-    let (input, _) = take_while1(|c: char| c.is_whitespace())(input)?;
+        separated_list1(space1, complete::u32)(input)?;
+    let (input, _) = space1(input)?;
     let (input, _) = tag("|")(input)?;
-    let (input, _) = take_while1(|c: char| c.is_whitespace())(input)?;
+    let (input, _) = space1(input)?;
     let (input, drawn) =
-        separated_list1(take_while1(|c: char| c.is_whitespace()), complete::u32)(input)?;
+        separated_list1(space1, complete::u32)(input)?;
 
     let points = drawn.iter().filter(|d| winning.contains(d)).count() as u32;
 
