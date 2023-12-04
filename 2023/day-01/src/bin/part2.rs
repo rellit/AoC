@@ -1,10 +1,10 @@
 fn main() {
-    let input = include_str!("../input2.txt");
-    let output = part2(input);
+    let input = include_str!("../input.txt");
+    let output = solve(input);
     dbg!(output);
 }
 
-fn part2(input: &str) -> u32 {
+fn solve(input: &str) -> u32 {
     input
         .lines()
         .map(|line| {
@@ -50,7 +50,7 @@ mod tests {
     #[test]
 
     fn test_code() {
-        let result = part2(
+        let result = solve(
             "two1nine
             eightwothree
             abcone2threexyz

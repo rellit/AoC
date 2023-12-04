@@ -14,12 +14,12 @@ struct Game {
 }
 
 fn main() {
-    let input = include_str!("../input2.txt");
-    let output = part2(input);
+    let input = include_str!("../input.txt");
+    let output = solve(input);
     dbg!(output);
 }
 
-fn part2(input: &str) -> u32 {
+fn solve(input: &str) -> u32 {
     let games: Vec<Game> = input.lines().map(|line| game(line).unwrap().1).collect();
 
     let mut map: HashMap<u32, u32> = HashMap::new();
@@ -83,7 +83,7 @@ mod tests {
     #[test]
 
     fn test_code() {
-        let result = part2(
+        let result = solve(
             "Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
 Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
 Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1

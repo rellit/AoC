@@ -7,12 +7,12 @@ struct Num {
 }
 
 fn main() {
-    let input = include_str!("../input1.txt");
-    let output = part1(input);
+    let input = include_str!("../input.txt");
+    let output = solve(input);
     dbg!(output);
 }
 
-fn part1(input: &str) -> u32 {
+fn solve(input: &str) -> u32 {
     let mut numbers: Vec<Num> = Vec::new();
     let mut line_vec: Vec<&str> = Vec::new();
     input.lines().enumerate().for_each(|(line_nr, line)| {
@@ -97,7 +97,7 @@ mod tests {
     #[test]
 
     fn test_code() {
-        let result = part1(
+        let result = solve(
 "467..114..
 ...*......
 ..35..633.
