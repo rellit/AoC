@@ -1,5 +1,5 @@
 use nom::{
-    bytes::complete::{tag, take_while1},
+    bytes::complete::{tag},
     character::complete::{self, space1},
     multi::separated_list1,
     IResult,
