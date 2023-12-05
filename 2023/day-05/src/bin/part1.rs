@@ -1,24 +1,22 @@
 use nom::{
-    ToUsize,
-    bytes::complete::{tag},
-    character::complete::{self, space1, alpha1},
+    bytes::complete::tag,
+    character::complete::{self, alpha1, space1},
     multi::separated_list1,
-    IResult, Err,
+    IResult, ToUsize,
 };
 
 #[derive(Debug)]
 struct Mapper<'a> {
-    src :&'a str,
-    dst: &'a str,
-    mappings: Vec<Mapping>
+    _src: &'a str,
+    _dst: &'a str,
+    mappings: Vec<Mapping>,
 }
 
 impl Mapper<'_> {
-    fn map(&self, src:usize) -> usize {
+    fn map(&self, src: usize) -> usize {
         for mapping in self.mappings.iter() {
-            println!("Applying {mapping:?} to {src}");
             if let Some(dst) = mapping.map(src) {
-                return dst
+                return dst;
             }
         }
 
@@ -30,18 +28,16 @@ impl Mapper<'_> {
 struct Mapping {
     src_start: usize,
     dst_start: usize,
-    map_size: usize
+    map_size: usize,
 }
 
 impl Mapping {
-    fn map(&self, src: usize) -> Option<usize>{
-        if (self.src_start..self.src_start+self.map_size).contains(&src)  {
-            let dst = (src as isize - (self.src_start as isize-self.dst_start as isize))as usize;
-            println!("Converting {src} to {dst} due to {self:?}");
-
+    fn map(&self, src: usize) -> Option<usize> {
+        if (self.src_start..self.src_start + self.map_size).contains(&src) {
+            let dst = (src as isize - (self.src_start as isize - self.dst_start as isize)) as usize;
             Some(dst)
         } else {
-        None
+            None
         }
     }
 }
@@ -49,18 +45,21 @@ impl Mapping {
 #[derive(Debug)]
 struct MappingTable<'a> {
     seeds: Vec<usize>,
-    mapper:Vec<Mapper<'a>>
+    mapper: Vec<Mapper<'a>>,
 }
 
 impl MappingTable<'_> {
-    fn apply(self)->Vec<usize>{
-        self.seeds.iter().map(|src|{
-            let mut dst: usize = *src;
-            for mapper in self.mapper.iter() {
-                dst = (mapper).map(dst);
-            }
-            dst
-        }).collect()
+    fn apply(self) -> Vec<usize> {
+        self.seeds
+            .iter()
+            .map(|src| {
+                let mut dst: usize = *src;
+                for mapper in self.mapper.iter() {
+                    dst = (mapper).map(dst);
+                }
+                dst
+            })
+            .collect()
     }
 }
 
@@ -71,23 +70,25 @@ fn main() {
 }
 
 fn solve(input: &str) -> u32 {
-
     let mt = mapping_table(input).unwrap().1;
-
-    let dst:Vec<usize> = mt.apply();
-
-    dbg!(dst);
-
-    0
+    let mut dst: Vec<usize> = mt.apply();
+    dst.sort();
+    *dst.first().unwrap() as u32
 }
 
 fn mapping_table(input: &str) -> IResult<&str, MappingTable> {
-         let (input, _) = tag("seeds: ")(input)?;
-         let (input, seeds) = separated_list1(space1, complete::u32)(input)?;
-         let (input, _) = tag("\n\n")(input)?;
-         let (input, mapper) = separated_list1(tag("\n\n"), mapper)(input)?;
+    let (input, _) = tag("seeds: ")(input)?;
+    let (input, seeds) = separated_list1(space1, complete::u32)(input)?;
+    let (input, _) = tag("\n\n")(input)?;
+    let (input, mapper) = separated_list1(tag("\n\n"), mapper)(input)?;
 
-         Ok((&input, MappingTable{mapper, seeds:seeds.iter().map(|s|s.to_usize()).collect()}))
+    Ok((
+        &input,
+        MappingTable {
+            mapper,
+            seeds: seeds.iter().map(|s| s.to_usize()).collect(),
+        },
+    ))
 }
 
 fn mapper(input: &str) -> IResult<&str, Mapper> {
@@ -98,7 +99,7 @@ fn mapper(input: &str) -> IResult<&str, Mapper> {
     let (input, _) = tag(" map:\n")(input)?;
     let (input, mappings) = separated_list1(tag("\n"), mapping)(input)?;
 
-    Ok((&input, Mapper{dst, src, mappings}))
+    Ok((&input, Mapper { _dst:dst, _src:src, mappings }))
 }
 
 fn mapping(input: &str) -> IResult<&str, Mapping> {
@@ -109,7 +110,14 @@ fn mapping(input: &str) -> IResult<&str, Mapping> {
     let (input, _) = tag(" ")(input)?;
     let (input, map_size) = complete::u32(input)?;
 
-    Ok((&input, Mapping{src_start:src_start.to_usize(), dst_start:dst_start.to_usize(), map_size:map_size.to_usize()}))
+    Ok((
+        &input,
+        Mapping {
+            src_start: src_start.to_usize(),
+            dst_start: dst_start.to_usize(),
+            map_size: map_size.to_usize(),
+        },
+    ))
 }
 
 #[cfg(test)]
