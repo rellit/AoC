@@ -1,8 +1,12 @@
+use std::ops::Range;
+
+use indicatif::ProgressIterator;
 use nom::{
     bytes::complete::tag,
     character::complete::{self, alpha1, space1},
     multi::separated_list1,
-    IResult, ToUsize, sequence::{tuple, pair, separated_pair},
+    sequence::separated_pair,
+    IResult,
 };
 
 #[derive(Debug)]
@@ -13,53 +17,45 @@ struct Mapper<'a> {
 }
 
 impl Mapper<'_> {
-    fn map(&self, src: usize) -> usize {
+    fn map(&self, src: u64) -> u64 {
         for mapping in self.mappings.iter() {
-            if let Some(dst) = mapping.map(src) {
-                return dst;
+            match mapping.map(src) {
+                Some(dst) => return dst,
+                None => (),
             }
         }
-
         return src;
     }
 }
 
 #[derive(Debug)]
 struct Mapping {
-    src_start: usize,
-    dst_start: usize,
-    map_size: usize,
+    range: Range<u64>,
+    correct: isize,
 }
 
 impl Mapping {
-    fn map(&self, src: usize) -> Option<usize> {
-        if (self.src_start..self.src_start + self.map_size).contains(&src) {
-            let dst = (src as isize - (self.src_start as isize - self.dst_start as isize)) as usize;
-            Some(dst)
-        } else {
-            None
+    fn map(&self, src: u64) -> Option<u64> {
+        match self.range.contains(&src) {
+            true => Some((src as isize - self.correct) as u64),
+            false => None,
         }
     }
 }
 
 #[derive(Debug)]
 struct MappingTable<'a> {
-    seeds: Vec<usize>,
+    seeds: Vec<Range<u64>>,
     mapper: Vec<Mapper<'a>>,
 }
 
 impl MappingTable<'_> {
-    fn apply(self) -> Vec<usize> {
-        self.seeds
-            .iter()
-            .map(|src| {
-                let mut dst: usize = *src;
-                for mapper in self.mapper.iter() {
-                    dst = (mapper).map(dst);
-                }
-                dst
-            })
-            .collect()
+    fn apply_for(&self, src: u64) -> u64 {
+        let mut dst: u64 = src;
+        self.mapper.iter().for_each(|mapper| {
+            dst = (mapper).map(dst);
+        });
+        dst
     }
 }
 
@@ -69,25 +65,37 @@ fn main() {
     dbg!(output);
 }
 
-fn solve(input: &str) -> u32 {
+fn solve(input: &str) -> u64 {
     let mt = mapping_table(input).unwrap().1;
-    let mut dst: Vec<usize> = mt.apply();
-    dst.sort();
-    *dst.first().unwrap() as u32
+
+    let mut lowest: u64 = u64::MAX;
+
+    let total: u64 = mt
+        .seeds
+        .iter()
+        .map(|seed_range| seed_range.clone().count() as u64)
+        .sum();
+
+    mt.seeds
+        .iter()
+        .flat_map(|seed_range| seed_range.clone().into_iter())
+        .progress_count(total)
+        .for_each(|seed| {
+            let new = mt.apply_for(seed);
+            lowest = lowest.min(new);
+        });
+
+    lowest as u64
 }
 
-fn seeds(input:&str)-> IResult<&str, Vec<usize>> {
+fn seeds(input: &str) -> IResult<&str, Vec<Range<u64>>> {
+    let (input, seeds) =
+        separated_list1(space1, separated_pair(complete::u64, space1, complete::u64))(input)?;
 
-    let (input, range) = separated_list1(space1, separated_pair(complete::u32, space1, complete::u32))(input)?;
-
-    let mut seeds:Vec<usize> = Vec::new();
-
-    for (start, length) in range.iter(){
-        for n in 0..*length {
-            seeds.push((start+n) as usize);
-        }
-    }
-
+    let seeds = seeds
+        .iter()
+        .map(|(start, size)| *start..start + size)
+        .collect();
     Ok((&input, seeds))
 }
 
@@ -97,13 +105,7 @@ fn mapping_table(input: &str) -> IResult<&str, MappingTable> {
     let (input, _) = tag("\n\n")(input)?;
     let (input, mapper) = separated_list1(tag("\n\n"), mapper)(input)?;
 
-    Ok((
-        &input,
-        MappingTable {
-            mapper,
-            seeds: seeds.iter().map(|s| s.to_usize()).collect(),
-        },
-    ))
+    Ok((&input, MappingTable { mapper, seeds }))
 }
 
 fn mapper(input: &str) -> IResult<&str, Mapper> {
@@ -114,23 +116,29 @@ fn mapper(input: &str) -> IResult<&str, Mapper> {
     let (input, _) = tag(" map:\n")(input)?;
     let (input, mappings) = separated_list1(tag("\n"), mapping)(input)?;
 
-    Ok((&input, Mapper { _dst:dst, _src:src, mappings }))
+    Ok((
+        &input,
+        Mapper {
+            _dst: dst,
+            _src: src,
+            mappings,
+        },
+    ))
 }
 
 fn mapping(input: &str) -> IResult<&str, Mapping> {
     //0 15 37
-    let (input, dst_start) = complete::u32(input)?;
+    let (input, dst_start) = complete::u64(input)?;
     let (input, _) = tag(" ")(input)?;
-    let (input, src_start) = complete::u32(input)?;
+    let (input, src_start) = complete::u64(input)?;
     let (input, _) = tag(" ")(input)?;
-    let (input, map_size) = complete::u32(input)?;
+    let (input, map_size) = complete::u64(input)?;
 
     Ok((
         &input,
         Mapping {
-            src_start: src_start.to_usize(),
-            dst_start: dst_start.to_usize(),
-            map_size: map_size.to_usize(),
+            range: (src_start..src_start + map_size),
+            correct: src_start as isize - dst_start as isize,
         },
     ))
 }
