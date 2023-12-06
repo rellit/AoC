@@ -64,16 +64,18 @@ impl Mapping {
             None
         };
 
-        let mapped = if (range.start < self.range.start && range.end >= self.range.start)
-            || (range.start >= self.range.start && range.start <= self.range.end)
-        {
-            let start = range.start.max(self.range.start);
-
-            let end = range.end.min(self.range.end);
-            Some(
-                start.checked_add_signed(self.correct).unwrap()
-                    ..end.checked_add_signed(self.correct).unwrap(),
-            )
+        let mapped = if self.range.contains(&range.start) || self.range.contains(&range.end) {
+            let start = range
+                .start
+                .max(self.range.start)
+                .checked_add_signed(self.correct)
+                .unwrap();
+            let end = range
+                .end
+                .min(self.range.end)
+                .checked_add_signed(self.correct)
+                .unwrap();
+            Some(start..end)
         } else {
             None
         };
