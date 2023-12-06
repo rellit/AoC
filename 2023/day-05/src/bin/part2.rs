@@ -1,6 +1,5 @@
 use std::ops::Range;
 
-use indicatif::ProgressIterator;
 use nom::{
     bytes::complete::tag,
     character::complete::{self, alpha1, space1},
@@ -17,29 +16,76 @@ struct Mapper<'a> {
 }
 
 impl Mapper<'_> {
-    fn map(&self, src: u64) -> u64 {
-        for mapping in self.mappings.iter() {
-            match mapping.map(src) {
-                Some(dst) => return dst,
-                None => (),
+    fn apply(&self, ranges: Vec<Range<u64>>) -> Vec<Range<u64>> {
+        let mut ret = Vec::new();
+
+        ranges.iter().for_each(|range| {
+            let mut rest = Some(range.clone());
+            for mapping in self.mappings.iter() {
+                let (pre, mapped, post) = mapping.apply_to(rest.unwrap().clone());
+
+                if pre.is_some() {
+                    ret.push(pre.unwrap())
+                }
+                if mapped.is_some() {
+                    ret.push(mapped.unwrap())
+                }
+
+                rest = post.clone();
+
+                if post.is_none() {
+                    break;
+                }
             }
-        }
-        return src;
+            if rest.is_some() {
+                ret.push(rest.unwrap())
+            }
+        });
+
+        ret
     }
 }
 
 #[derive(Debug)]
 struct Mapping {
     range: Range<u64>,
-    correct: isize,
+    correct: i64,
 }
 
 impl Mapping {
-    fn map(&self, src: u64) -> Option<u64> {
-        match self.range.contains(&src) {
-            true => Some((src as isize - self.correct) as u64),
-            false => None,
-        }
+    fn apply_to(
+        &self,
+        range: Range<u64>,
+    ) -> (Option<Range<u64>>, Option<Range<u64>>, Option<Range<u64>>) {
+        let pre = if range.start < self.range.start {
+            let end = self.range.start.min(range.end);
+            Some(range.start..end)
+        } else {
+            None
+        };
+
+        let mapped = if (range.start < self.range.start && range.end >= self.range.start)
+            || (range.start >= self.range.start && range.start <= self.range.end)
+        {
+            let start = range.start.max(self.range.start);
+
+            let end = range.end.min(self.range.end);
+            Some(
+                start.checked_add_signed(self.correct).unwrap()
+                    ..end.checked_add_signed(self.correct).unwrap(),
+            )
+        } else {
+            None
+        };
+
+        let post = if range.end > self.range.end {
+            let start = range.start.max(self.range.end);
+            Some(start..range.end)
+        } else {
+            None
+        };
+
+        (pre, mapped, post)
     }
 }
 
@@ -50,12 +96,12 @@ struct MappingTable<'a> {
 }
 
 impl MappingTable<'_> {
-    fn apply_for(&self, src: u64) -> u64 {
-        let mut dst: u64 = src;
+    fn apply(&self) -> Vec<Range<u64>> {
+        let mut new = self.seeds.clone();
         self.mapper.iter().for_each(|mapper| {
-            dst = (mapper).map(dst);
+            new = mapper.apply(new.clone());
         });
-        dst
+        new
     }
 }
 
@@ -68,24 +114,11 @@ fn main() {
 fn solve(input: &str) -> u64 {
     let mt = mapping_table(input).unwrap().1;
 
-    let mut lowest: u64 = u64::MAX;
+    let mut calc: Vec<Range<u64>> = mt.apply();
 
-    let total: u64 = mt
-        .seeds
-        .iter()
-        .map(|seed_range| seed_range.clone().count() as u64)
-        .sum();
+    calc.sort_by(|r1, r2| r1.start.cmp(&r2.start));
 
-    mt.seeds
-        .iter()
-        .flat_map(|seed_range| seed_range.clone().into_iter())
-        .progress_count(total)
-        .for_each(|seed| {
-            let new = mt.apply_for(seed);
-            lowest = lowest.min(new);
-        });
-
-    lowest as u64
+    calc.first().unwrap().start
 }
 
 fn seeds(input: &str) -> IResult<&str, Vec<Range<u64>>> {
@@ -114,7 +147,9 @@ fn mapper(input: &str) -> IResult<&str, Mapper> {
     let (input, _) = tag("-to-")(input)?;
     let (input, dst) = alpha1(input)?;
     let (input, _) = tag(" map:\n")(input)?;
-    let (input, mappings) = separated_list1(tag("\n"), mapping)(input)?;
+    let (input, mut mappings) = separated_list1(tag("\n"), mapping)(input)?;
+
+    mappings.sort_by(|mapping1, mapping2| mapping1.range.start.cmp(&mapping2.range.start));
 
     Ok((
         &input,
@@ -138,7 +173,7 @@ fn mapping(input: &str) -> IResult<&str, Mapping> {
         &input,
         Mapping {
             range: (src_start..src_start + map_size),
-            correct: src_start as isize - dst_start as isize,
+            correct: dst_start as i64 - src_start as i64,
         },
     ))
 }
