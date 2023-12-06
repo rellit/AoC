@@ -43,27 +43,15 @@ fn racing_table(input: &str) -> IResult<&str, (u64, u64)> {
 
 fn ways_to_beat(dist: &u64, time: &u64) -> u64 {
     let mut min = 0;
-    let mut max = 0;
 
     for t in 0..*time {
-        if beats(dist, t, time) {
+        if t * (time - t) > *dist {
             min = t;
             break;
         }
     }
 
-    for t in (0..*time).into_iter().rev() {
-        if beats(dist, t, time) {
-            max = t;
-            break;
-        }
-    }
-
-    max + 1 - min
-}
-
-fn beats(dist: &u64, hold: u64, duration: &u64) -> bool {
-    hold * (duration - hold) > *dist
+    time - 2 * min + 1
 }
 
 #[cfg(test)]

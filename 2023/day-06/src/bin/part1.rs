@@ -36,27 +36,15 @@ fn racing_table(input: &str) -> IResult<&str, (Vec<u32>, Vec<u32>)> {
 
 fn ways_to_beat(dist: &u32, time: &u32) -> u32 {
     let mut min = 0;
-    let mut max = 0;
 
     for t in 0..*time {
-        if beats(dist, t, time) {
+        if t * (time - t) > *dist {
             min = t;
             break;
         }
     }
 
-    for t in (0..*time).into_iter().rev() {
-        if beats(dist, t, time) {
-            max = t;
-            break;
-        }
-    }
-
-    max + 1 - min
-}
-
-fn beats(dist: &u32, hold: u32, duration: &u32) -> bool {
-    hold * (duration - hold) > *dist
+    time - 2 * min + 1
 }
 
 #[cfg(test)]
