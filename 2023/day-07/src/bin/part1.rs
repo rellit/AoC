@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, ops::Index};
+use std::{cmp::Ordering};
 
 use nom::{
     bytes::complete::tag,
