@@ -1,4 +1,4 @@
-use std::{cmp::Ordering};
+use std::cmp::Ordering;
 
 use nom::{
     bytes::complete::tag,
@@ -35,7 +35,7 @@ fn main() {
 }
 
 fn solve(input: &str) -> u32 {
-    let mut draw = draw(input).unwrap().1;
+    let mut draw = parse_draw(input).unwrap().1;
 
     draw.sort_by(|d1, d2| match d1.kind.cmp(&d2.kind) {
         std::cmp::Ordering::Equal => compare_cards(d1.cards, d2.cards),
@@ -48,7 +48,7 @@ fn solve(input: &str) -> u32 {
         .sum()
 }
 
-fn draw(input: &str) -> IResult<&str, Vec<Draw>> {
+fn parse_draw(input: &str) -> IResult<&str, Vec<Draw>> {
     let (input, draw) = separated_list1(
         tag("\n"),
         separated_pair(alphanumeric1, tag(" "), complete::u32),
@@ -106,12 +106,8 @@ fn compare_cards(cards1: &str, cards2: &str) -> Ordering {
         let i2 = ORDER.find(c2).expect("Only valid input");
 
         match i1.cmp(&i2) {
-            std::cmp::Ordering::Equal => {
-                continue;
-            }
-            d => {
-                return d;
-            }
+            std::cmp::Ordering::Equal => continue,
+            d => return d,
         }
     }
     Ordering::Equal
