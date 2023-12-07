@@ -86,7 +86,7 @@ fn determine_kind(cards: &str) -> Strength {
                     .filter(|char| *char != c && (*char != 'J' || c == 'J'))
                     .collect();
 
-                strongest = strongest.max(if rest.get(0).unwrap() == rest.get(1).unwrap() {
+                strongest = strongest.max(if rest.first().unwrap() == rest.get(1).unwrap() {
                     Strength::FullHouse
                 } else {
                     Strength::ThreeOfAKind

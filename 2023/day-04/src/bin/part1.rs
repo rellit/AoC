@@ -1,5 +1,5 @@
 use nom::{
-    bytes::complete::{tag},
+    bytes::complete::tag,
     character::complete::{self, space1},
     multi::separated_list1,
     IResult,
@@ -28,7 +28,7 @@ fn solve(input: &str) -> u32 {
             if game.points == 0 {
                 return 0;
             }
-            2u32.pow(game.points as u32 - 1)
+            2u32.pow(game.points - 1)
         })
         .sum();
     won
@@ -40,13 +40,11 @@ fn game(input: &str) -> IResult<&str, Game> {
     let (input, game_id) = complete::u32(input)?;
     let (input, _) = tag(":")(input)?;
     let (input, _) = space1(input)?;
-    let (input, winning) =
-        separated_list1(space1, complete::u32)(input)?;
+    let (input, winning) = separated_list1(space1, complete::u32)(input)?;
     let (input, _) = space1(input)?;
     let (input, _) = tag("|")(input)?;
     let (input, _) = space1(input)?;
-    let (input, drawn) =
-        separated_list1(space1, complete::u32)(input)?;
+    let (input, drawn) = separated_list1(space1, complete::u32)(input)?;
 
     let points = drawn.iter().filter(|d| winning.contains(d)).count() as u32;
 

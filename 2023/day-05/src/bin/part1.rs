@@ -20,7 +20,7 @@ impl Mapper<'_> {
             }
         }
 
-        return src;
+        src
     }
 }
 
@@ -99,7 +99,14 @@ fn mapper(input: &str) -> IResult<&str, Mapper> {
     let (input, _) = tag(" map:\n")(input)?;
     let (input, mappings) = separated_list1(tag("\n"), mapping)(input)?;
 
-    Ok((&input, Mapper { _dst:dst, _src:src, mappings }))
+    Ok((
+        &input,
+        Mapper {
+            _dst: dst,
+            _src: src,
+            mappings,
+        },
+    ))
 }
 
 fn mapping(input: &str) -> IResult<&str, Mapping> {

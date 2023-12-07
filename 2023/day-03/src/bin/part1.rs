@@ -22,32 +22,30 @@ fn solve(input: &str) -> u32 {
         let mut char_iter = line.chars().enumerate().peekable();
 
         while let Some((idx, char)) = char_iter.next() {
-            if char.is_digit(10) {
+            if char.is_ascii_digit() {
                 if start.is_none() {
                     start = Some(idx)
                 }
                 num = num * 10 + char.to_digit(10).unwrap();
 
-                if char_iter.peek().is_none() || !char_iter.peek().unwrap().1.is_digit(10) {
-                    if start.is_some() {
-                        numbers.push(Num {
-                            line: (line_nr),
-                            start: (start.expect("Geprüft")),
-                            len: idx + 1 - start.expect("Geprüft"),
-                            num,
-                        });
-                        num = 0;
-                        start = None;
-                    }
+                if (char_iter.peek().is_none() || !char_iter.peek().unwrap().1.is_ascii_digit())
+                    && start.is_some()
+                {
+                    numbers.push(Num {
+                        line: (line_nr),
+                        start: (start.expect("Geprüft")),
+                        len: idx + 1 - start.expect("Geprüft"),
+                        num,
+                    });
+                    num = 0;
+                    start = None;
                 }
             }
         }
     });
 
     let valid_numbers = numbers.iter().filter_map(|num| {
-        if is_symbol(get(&line_vec, num.line as isize, num.start as isize - 1)) {
-            return Some(num.num);
-        } else if is_symbol(get(
+        if is_symbol(get(
             &line_vec,
             num.line as isize,
             num.start as isize + num.len as isize,
@@ -63,13 +61,13 @@ fn solve(input: &str) -> u32 {
             }
         }
 
-        return None;
+        None
     });
 
     valid_numbers.sum()
 }
 
-fn get(line_vec: &Vec<&str>, line: isize, idx: isize) -> Option<char> {
+fn get(line_vec: &[&str], line: isize, idx: isize) -> Option<char> {
     if line < 0 {
         return None;
     }
@@ -80,15 +78,7 @@ fn get(line_vec: &Vec<&str>, line: isize, idx: isize) -> Option<char> {
 }
 
 fn is_symbol(char: Option<char>) -> bool {
-    if char.is_none() {
-        false
-    } else if char.expect("Proved in first compare").is_digit(10) {
-        false
-    } else if char.expect("msg") == '.' {
-        false
-    } else {
-        true
-    }
+    !(char.is_none() || char.unwrap().is_ascii_digit() || char.unwrap() == '.')
 }
 
 #[cfg(test)]
@@ -98,7 +88,7 @@ mod tests {
 
     fn test_code() {
         let result = solve(
-"467..114..
+            "467..114..
 ...*......
 ..35..633.
 ......#...

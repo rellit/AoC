@@ -14,13 +14,13 @@ impl Num {
             return true;
         }
 
-        if gear.line + 1 == self.line || gear.line - 1 == self.line {
-            if gear.idx >= self.start - 1 && gear.idx <= self.start + self.len {
-                return true;
-            }
+        if (gear.line + 1 == self.line || gear.line - 1 == self.line)
+            && (gear.idx >= self.start - 1 && gear.idx <= self.start + self.len)
+        {
+            return true;
         }
 
-        return false;
+        false
     }
 }
 
@@ -46,23 +46,23 @@ fn solve(input: &str) -> u32 {
         let mut char_iter = line.chars().enumerate().peekable();
 
         while let Some((idx, char)) = char_iter.next() {
-            if char.is_digit(10) {
+            if char.is_ascii_digit() {
                 if start.is_none() {
                     start = Some(idx)
                 }
                 num = num * 10 + char.to_digit(10).unwrap();
 
-                if char_iter.peek().is_none() || !char_iter.peek().unwrap().1.is_digit(10) {
-                    if start.is_some() {
-                        numbers.push(Num {
-                            line: (line_nr as isize),
-                            start: (start.expect("Geprüft") as isize),
-                            len: idx as isize + 1 - start.expect("Geprüft") as isize,
-                            num,
-                        });
-                        num = 0;
-                        start = None;
-                    }
+                if (char_iter.peek().is_none() || !char_iter.peek().unwrap().1.is_ascii_digit())
+                    && start.is_some()
+                {
+                    numbers.push(Num {
+                        line: (line_nr as isize),
+                        start: (start.expect("Geprüft") as isize),
+                        len: idx as isize + 1 - start.expect("Geprüft") as isize,
+                        num,
+                    });
+                    num = 0;
+                    start = None;
                 }
             }
             if char == '*' {

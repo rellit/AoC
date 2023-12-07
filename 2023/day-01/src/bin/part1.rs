@@ -12,9 +12,7 @@ fn solve(input: &str) -> u32 {
             let first = it.next().expect("There sould be at leas 1 number");
             match it.last() {
                 Some(num) => first * 10 + num,
-                None => {
-                    first * 10 + first
-                }
+                None => first * 10 + first,
             }
         })
         .sum::<u32>()

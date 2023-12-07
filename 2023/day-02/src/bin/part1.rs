@@ -42,19 +42,19 @@ fn parse_game(input: &str) -> Vec<Game> {
     input
         .lines()
         .map(|line| {
-            let mut iter = line.split(":").into_iter();
+            let mut iter = line.split(':');
             let game_id = iter.next().unwrap();
 
             let draws_str = iter.next().unwrap();
-            let draws = draws_str.split(";").into_iter().map(|draw_str| {
+            let draws = draws_str.split(';').map(|draw_str| {
                 let mut draw = Draw {
                     red: 0,
                     green: 0,
                     blue: 0,
                 };
 
-                draw_str.split(",").into_iter().for_each(|draw_col| {
-                    let mut col = draw_col.trim().split(" ").into_iter();
+                draw_str.split(',').for_each(|draw_col| {
+                    let mut col = draw_col.trim().split(' ');
                     let count: u32 = col.next().unwrap().trim().parse().unwrap();
                     match col.next() {
                         Some("red") => draw.red = count,

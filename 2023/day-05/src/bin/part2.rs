@@ -24,11 +24,11 @@ impl Mapper<'_> {
             for mapping in self.mappings.iter() {
                 let (pre, mapped, post) = mapping.apply_to(rest.unwrap().clone());
 
-                if pre.is_some() {
-                    ret.push(pre.unwrap())
+                if let Some(pre) = pre {
+                    ret.push(pre)
                 }
-                if mapped.is_some() {
-                    ret.push(mapped.unwrap())
+                if let Some(mapped) = mapped {
+                    ret.push(mapped)
                 }
 
                 rest = post.clone();
@@ -37,8 +37,8 @@ impl Mapper<'_> {
                     break;
                 }
             }
-            if rest.is_some() {
-                ret.push(rest.unwrap())
+            if let Some(rest) = rest {
+                ret.push(rest)
             }
         });
 
@@ -52,11 +52,10 @@ struct Mapping {
     correct: i64,
 }
 
+type MappingReturn = (Option<Range<u64>>, Option<Range<u64>>, Option<Range<u64>>);
+
 impl Mapping {
-    fn apply_to(
-        &self,
-        range: Range<u64>,
-    ) -> (Option<Range<u64>>, Option<Range<u64>>, Option<Range<u64>>) {
+    fn apply_to(&self, range: Range<u64>) -> MappingReturn {
         let pre = if range.start < self.range.start {
             let end = self.range.start.min(range.end);
             Some(range.start..end)
