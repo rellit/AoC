@@ -42,8 +42,6 @@ fn solve(input: &str) -> u32 {
         d => d,
     });
 
-    dbg!(&draw);
-
     draw.iter()
         .enumerate()
         .map(|(i, d)| d.bid * (i as u32 + 1))
