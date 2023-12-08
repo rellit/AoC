@@ -26,32 +26,45 @@ fn solve(input: &str) -> u64 {
     let directions = parse_map(input).unwrap().1 .0;
     let map = parse_map(input).unwrap().1 .1;
 
-    let steps: Vec<u64> = map
+    let steps: Vec<Vec<u64>> = map
         .values()
         .filter(|node| node.id.ends_with('A'))
         .map(|mut pos| {
-            let mut steps: u64 = 0;
-            let mut found = false;
+            let mut solutions: Vec<u64> = Vec::new();
 
-            while !found {
-                for d in directions.chars() {
-                    steps += 1;
-                    match d {
-                        'R' => pos = map.get(pos.right).expect("Nodes should exist"),
-                        'L' => pos = map.get(pos.left).expect("Nodes should exist"),
-                        dir => panic!("Direction {dir} unknown"),
-                    }
-                    if pos.id.ends_with('Z') {
-                        found = true;
+            let mut steps: u64 = 0;
+            let mut index: u64 = 0;
+
+            println!("Search for {pos:?}");
+            loop {
+                steps += 1;
+                let idx = index as usize % directions.len();
+                match directions.get(idx..idx + 1) {
+                    Some("R") => pos = map.get(pos.right).expect("Nodes should exist"),
+                    Some("L") => pos = map.get(pos.left).expect("Nodes should exist"),
+                    Some(dir) => panic!("Direction {dir} unknown"),
+                    _ => panic!("Invalid direction idx"),
+                }
+                if pos.id.ends_with('Z') {
+                    println!("Found solution {pos:?} {steps:?}");
+                    if solutions.iter().filter(|&s| *s == steps).count() > 0 {
                         break;
+                    } else {
+                        solutions.push(steps);
+                        steps = 0;
                     }
                 }
+
+                index += 1;
             }
-            steps
+            solutions
         })
         .collect();
 
-    steps.iter().fold(1, |acc, v| lcm(acc, *v))
+    steps
+        .iter()
+        .flat_map(|s| s.iter()) //Should this be cartesian instead of trying all? I feel like
+        .fold(1, |acc, v| lcm(acc, *v))
 }
 
 fn parse_node(input: &str) -> IResult<&str, Node> {
