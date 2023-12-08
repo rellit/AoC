@@ -8,7 +8,6 @@ use nom::{
     sequence::separated_pair,
     IResult,
 };
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 #[derive(Debug)]
 struct Node<'a> {
