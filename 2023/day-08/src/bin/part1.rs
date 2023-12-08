@@ -1,11 +1,10 @@
 use std::{
-    cmp::Ordering,
-    collections::{HashMap, HashSet},
+    collections::{HashMap},
 };
 
 use nom::{
     bytes::complete::tag,
-    character::complete::{self, alpha1, alphanumeric1},
+    character::complete::{alpha1, alphanumeric1},
     multi::separated_list1,
     sequence::separated_pair,
     IResult,

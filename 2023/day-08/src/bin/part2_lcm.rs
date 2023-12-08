@@ -1,3 +1,4 @@
+use num::integer::lcm;
 use std::collections::HashMap;
 
 use nom::{
@@ -22,39 +23,36 @@ fn main() {
     dbg!(output);
 }
 
-fn solve(input: &str) -> u32 {
+fn solve(input: &str) -> u64 {
     let directions = parse_map(input).unwrap().1 .0;
     let map = parse_map(input).unwrap().1 .1;
 
-    let mut steps: u32 = 0;
-    let mut found = false;
-    let mut pos: Vec<&Node> = map.values().filter(|node| node.id.ends_with('A')).collect();
-    while !found {
-        for d in directions.chars() {
-            steps += 1;
-            match d {
-                'R' => {
-                    pos = pos
-                        .iter()
-                        .map(|p| map.get(p.right).expect("Nodes should exist"))
-                        .collect()
-                }
-                'L' => {
-                    pos = pos
-                        .iter()
-                        .map(|p| map.get(p.left).expect("Nodes should exist"))
-                        .collect()
-                }
-                dir => panic!("Direction {dir} unknown"),
-            }
-            if pos.par_iter().all(|p| p.id.ends_with('Z')) {
-                found = true;
-                break;
-            }
-        }
-    }
+    let steps: Vec<u64> = map
+        .values()
+        .filter(|node| node.id.ends_with('A'))
+        .map(|mut pos| {
+            let mut steps: u64 = 0;
+            let mut found = false;
 
-    steps
+            while !found {
+                for d in directions.chars() {
+                    steps += 1;
+                    match d {
+                        'R' => pos = map.get(pos.right).expect("Nodes should exist"),
+                        'L' => pos = map.get(pos.left).expect("Nodes should exist"),
+                        dir => panic!("Direction {dir} unknown"),
+                    }
+                    if pos.id.ends_with('Z') {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            steps
+        })
+        .collect();
+
+    steps.iter().fold(1, |acc, v| lcm(acc, *v))
 }
 
 fn parse_node(input: &str) -> IResult<&str, Node> {
