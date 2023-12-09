@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+
 fn main() {
     let input = include_str!("../input.txt");
     let output = solve(input);
@@ -23,9 +25,13 @@ fn solve(input: &str) -> u32 {
             acc
         });
 
-        carry.sort_by(|c1, c2| c2.iter().sum::<usize>().cmp(&c1.iter().sum::<usize>()) );
-    
-    carry.iter().take(1).map(|c|c.iter().sum::<usize>()).sum::<usize>()  as u32
+    carry.sort_by_key(|c| Reverse(c.iter().sum::<usize>()));
+
+    carry
+        .iter()
+        .take(1)
+        .map(|c| c.iter().sum::<usize>())
+        .sum::<usize>() as u32
 }
 
 #[cfg(test)]
