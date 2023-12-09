@@ -78,7 +78,7 @@ fn determine_kind(cards: &str) -> Strength {
             3 => {
                 let rest: Vec<char> = cards.chars().filter(|char| *char != c).collect();
 
-                return if rest.get(0).unwrap() == rest.get(1).unwrap() {
+                return if rest.first().unwrap() == rest.get(1).unwrap() {
                     Strength::FullHouse
                 } else {
                     Strength::ThreeOfAKind
