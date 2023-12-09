@@ -23,8 +23,7 @@ fn main() {
 }
 
 fn solve(input: &str) -> u64 {
-    let directions = parse_map(input).unwrap().1 .0;
-    let map = parse_map(input).unwrap().1 .1;
+    let (_, (directions, map)) = parse_map(input).expect("Parsable Input");
 
     let steps: Vec<Vec<u64>> = map
         .values()

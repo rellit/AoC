@@ -23,35 +23,35 @@ fn main() {
 }
 
 fn solve(input: &str) -> u32 {
-    let directions = parse_map(input).unwrap().1 .0;
-    let map = parse_map(input).unwrap().1 .1;
+    let (_, (directions, map)) = parse_map(input).expect("Parsable Input");
 
     let mut steps: u32 = 0;
-    let mut found = false;
+    let mut index: u32 = 0;
     let mut pos: Vec<&Node> = map.values().filter(|node| node.id.ends_with('A')).collect();
-    while !found {
-        for d in directions.chars() {
-            steps += 1;
-            match d {
-                'R' => {
-                    pos = pos
-                        .iter()
-                        .map(|p| map.get(p.right).expect("Nodes should exist"))
-                        .collect()
-                }
-                'L' => {
-                    pos = pos
-                        .iter()
-                        .map(|p| map.get(p.left).expect("Nodes should exist"))
-                        .collect()
-                }
-                dir => panic!("Direction {dir} unknown"),
+    loop {
+        steps += 1;
+        let idx = index as usize % directions.len();
+
+        match directions.get(idx..idx + 1) {
+            Some("R") => {
+                pos = pos
+                    .iter()
+                    .map(|p| map.get(p.right).expect("Nodes should exist"))
+                    .collect()
             }
-            if pos.par_iter().all(|p| p.id.ends_with('Z')) {
-                found = true;
-                break;
+            Some("L") => {
+                pos = pos
+                    .iter()
+                    .map(|p| map.get(p.left).expect("Nodes should exist"))
+                    .collect()
             }
+            Some(dir) => panic!("Direction {dir} unknown"),
+            _ => panic!("Invalid direction idx"),
         }
+        if pos.par_iter().all(|p| p.id.ends_with('Z')) {
+            break;
+        }
+        index += 1
     }
 
     steps

@@ -1,6 +1,4 @@
-use std::{
-    collections::{HashMap},
-};
+use std::collections::HashMap;
 
 use nom::{
     bytes::complete::tag,
@@ -24,25 +22,26 @@ fn main() {
 }
 
 fn solve(input: &str) -> u32 {
-    let directions = parse_map(input).unwrap().1 .0;
-    let map = parse_map(input).unwrap().1 .1;
+    let (_, (directions, map)) = parse_map(input).expect("Parsable Input");
 
     let mut steps: u32 = 0;
-    let mut found = false;
+    let mut index: u32 = 0;
     let mut pos: &Node = map.get("AAA").expect("Start should exist and be AAA");
-    while !found {
-        for d in directions.chars() {
-            steps += 1;
-            match d {
-                'R' => pos = map.get(pos.right).expect("Nodes should exist"),
-                'L' => pos = map.get(pos.left).expect("Nodes should exist"),
-                dir => panic!("Direction {dir} unknown"),
-            }
-            if pos.id == "ZZZ" {
-                found = true;
-                break;
-            }
+    loop {
+        steps += 1;
+        let idx = index as usize % directions.len();
+
+        match directions.get(idx..idx + 1) {
+            Some("R") => pos = map.get(pos.right).expect("Nodes should exist"),
+            Some("L") => pos = map.get(pos.left).expect("Nodes should exist"),
+            Some(dir) => panic!("Direction {dir} unknown"),
+            _ => panic!("Invalid direction idx"),
         }
+        if pos.id == "ZZZ" {
+            break;
+        }
+
+        index += 1;
     }
 
     steps
