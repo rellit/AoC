@@ -1,8 +1,11 @@
+use colored::Colorize;
+use std::{collections::HashSet, fmt::Display};
+
 use rusttype::{Point, Vector};
 
 type Direction = Vector<isize>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Dir {
     Up = 0,
     Right = 1,
@@ -42,7 +45,7 @@ impl From<isize> for Dir {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug, Hash)]
 enum Tile {
     NS,
     EW,
@@ -65,19 +68,71 @@ impl Tile {
     }
 }
 
+impl Display for Tile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Tile::NS => f.write_str("│"),
+            Tile::EW => f.write_str("─"),
+            Tile::NE => f.write_str("└"),
+            Tile::SE => f.write_str("┌"),
+            Tile::SW => f.write_str("┐"),
+            Tile::NW => f.write_str("┘"),
+            Tile::Start => f.write_str("S"),
+            Tile::None => f.write_str("."),
+        }
+    }
+}
+
 struct Map {
     tile_array: Vec<Vec<Tile>>,
+    loop_length: Option<usize>,
+    loop_tiles: HashSet<Point<isize>>,
+    outside_tiles: HashSet<Point<isize>>,
 }
 
 impl Map {
-    fn _width(&self) -> usize {
-        self.tile_array.first().unwrap().len()
-    }
-    fn _height(&self) -> usize {
-        self.tile_array.len()
-    }
     fn get_at(&self, pos: &Point<isize>) -> Option<&Tile> {
         self.tile_array.get(pos.y as usize)?.get(pos.x as usize)
+    }
+
+    fn counts_as(&self, pos: Point<isize>) -> &Tile {
+        let t: &Tile = self.get_at(&pos).expect("Valid Tile");
+        if *t == Tile::Start {
+            let mut p = 0;
+            if let Some(possible) = self.get_at(&(pos + Dir::Up.value())) {
+                if possible.can_go(&Dir::Down) {
+                    p += 1
+                }
+            }
+            if let Some(possible) = self.get_at(&(pos + Dir::Right.value())) {
+                if possible.can_go(&Dir::Left) {
+                    p += 2
+                }
+            }
+            if let Some(possible) = self.get_at(&(pos + Dir::Down.value())) {
+                if possible.can_go(&Dir::Up) {
+                    p += 4
+                }
+            }
+            if let Some(possible) = self.get_at(&(pos + Dir::Left.value())) {
+                if possible.can_go(&Dir::Right) {
+                    p += 8
+                }
+            }
+
+            let tile = match p {
+                3 => &Tile::NE,
+                5 => &Tile::NS,
+                9 => &Tile::NW,
+                6 => &Tile::SE,
+                10 => &Tile::EW,
+                12 => &Tile::SW,
+                _ => &Tile::None,
+            };
+            tile
+        } else {
+            t
+        }
     }
 
     fn find_start(&self) -> Point<isize> {
@@ -130,18 +185,92 @@ impl Map {
         next.expect("Valid loop")
     }
 
-    fn loop_length(&self, start: &Point<isize>) -> usize {
-        let first_step = self.get_next(start, None);
-        self.follow(start, &first_step, 1)
+    fn find_loop(&mut self) {
+        let start: Point<isize> = self.find_start();
+        let first_step = self.get_next(&start, None);
+        self.loop_length = Some(self.follow(&start, &first_step, 1));
     }
 
-    fn follow(&self, from: &Point<isize>, act: &Point<isize>, steps: usize) -> usize {
+    fn follow(&mut self, from: &Point<isize>, act: &Point<isize>, steps: usize) -> usize {
+        self.loop_tiles.insert(*act);
         if *self.get_at(act).expect("Valid tile") == Tile::Start {
             steps
         } else {
             let next = self.get_next(act, Some(from));
             self.follow(act, &next, steps + 1)
         }
+    }
+
+    fn mark_fields_outside(&mut self) {
+        for (y, l) in self.tile_array.iter().enumerate() {
+            let mut inside = false;
+            let mut half_border = None;
+            for (x, _) in l.iter().enumerate() {
+                let p = Point {
+                    x: x as isize,
+                    y: y as isize,
+                };
+
+                if self.loop_tiles.contains(&p) {
+                    match self.counts_as(p) {
+                        Tile::NS => inside = !inside,
+                        Tile::EW => (),
+                        Tile::NE | Tile::NW => match half_border {
+                            Some(h) => {
+                                half_border = None;
+                                if h != Dir::Up {
+                                    inside = !inside;
+                                }
+                            }
+                            None => half_border = Some(Dir::Up),
+                        },
+                        Tile::SE | Tile::SW => match half_border {
+                            Some(h) => {
+                                half_border = None;
+                                if h != Dir::Down {
+                                    inside = !inside;
+                                }
+                            }
+                            None => half_border = Some(Dir::Down),
+                        },
+                        Tile::Start => (),
+                        Tile::None => (),
+                    }
+                    continue;
+                }
+
+                if !self.outside_tiles.contains(&p) && !inside {
+                    self.outside_tiles.insert(p);
+                }
+            }
+        }
+    }
+
+    fn print(&self) {
+        for (y, l) in self.tile_array.iter().enumerate() {
+            for (x, t) in l.iter().enumerate() {
+                let f = format!("{t}");
+                if self.loop_tiles.contains(&Point {
+                    x: x as isize,
+                    y: y as isize,
+                }) {
+                    print!("{}", f.green())
+                } else if self.outside_tiles.contains(&Point {
+                    x: x as isize,
+                    y: y as isize,
+                }) {
+                    print!("{}", f.red())
+                } else {
+                    print!("{}", f)
+                }
+            }
+            println!()
+        }
+    }
+
+    fn trapped_tiles(&self) -> usize {
+        self.tile_array.len() * self.tile_array.first().unwrap().len()
+            - (self.loop_length.expect("Loop was already found") + self.outside_tiles.len())
     }
 }
 
@@ -152,12 +281,13 @@ fn main() {
 }
 
 fn solve(input: &str) -> usize {
-    let map: Map = parse_map(input);
+    let mut map: Map = parse_map(input);
+    map.find_loop();
+    map.mark_fields_outside();
 
-    let start = map.find_start();
+    map.print();
 
-    let ll: usize = map.loop_length(&start);
-    ll / 2
+    map.trapped_tiles()
 }
 
 fn parse_map(input: &str) -> Map {
@@ -182,7 +312,12 @@ fn parse_map(input: &str) -> Map {
                 .collect()
         })
         .collect();
-    Map { tile_array }
+    Map {
+        tile_array,
+        loop_length: None,
+        loop_tiles: HashSet::new(),
+        outside_tiles: HashSet::new(),
+    }
 }
 
 #[cfg(test)]
@@ -197,6 +332,36 @@ mod tests {
 .|.|.
 .L-J.
 .....",
+        );
+        assert_eq!(result, 1);
+    }
+    #[test]
+    fn test_code2() {
+        let result = solve(
+            "...........
+.S-------7.
+.|F-----7|.
+.||.....||.
+.||.....||.
+.|L-7.F-J|.
+.|..|.|..|.
+.L--J.L--J.
+...........",
+        );
+        assert_eq!(result, 4);
+    }
+    #[test]
+    fn test_code3() {
+        let result = solve(
+            "..........
+.S------7.
+.|F----7|.
+.||....||.
+.||....||.
+.|L-7F-J|.
+.|..||..|.
+.L--JL--J.
+..........",
         );
         assert_eq!(result, 4);
     }

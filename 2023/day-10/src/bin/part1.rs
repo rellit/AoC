@@ -70,12 +70,6 @@ struct Map {
 }
 
 impl Map {
-    fn _width(&self) -> usize {
-        self.tile_array.first().unwrap().len()
-    }
-    fn _height(&self) -> usize {
-        self.tile_array.len()
-    }
     fn get_at(&self, pos: &Point<isize>) -> Option<&Tile> {
         self.tile_array.get(pos.y as usize)?.get(pos.x as usize)
     }
