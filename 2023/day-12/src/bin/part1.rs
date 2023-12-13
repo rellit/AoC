@@ -18,63 +18,60 @@ fn main() {
     dbg!(output);
 }
 
-fn solve(input: &str) -> usize {
-    let (_, map) = parse_map(input).expect("Valid input");
+fn count(map: &str, groups: &[u32]) -> u32 {
+    if map.is_empty() {
+        if groups.is_empty() {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+    if groups.is_empty() {
+        if map.contains('#') {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
 
-    map.iter()
-        .map(|line| {
-            let placeholders = line.map.chars().filter(|c| *c == '?').count();
-            let hashs = line.map.chars().filter(|c| *c == '#').count();
-            let group_sum = line.groups.iter().sum::<u32>() as usize;
-            let max_options = 2u32.pow(placeholders as u32);
+    let mut res = 0;
 
-            (0..max_options)
-                .map(|p| format!("{p:0>width$b}", width = placeholders))
-                .filter(|mask| mask.chars().filter(|c| *c == '1').count() + hashs == group_sum)
-                .filter(|mask| {
-                    let res = mask.chars().fold(line.map.to_string(), |acc, c| {
-                        acc.replacen(
-                            '?',
-                            match c {
-                                '1' => "#",
-                                '0' => ".",
-                                _ => panic!("Invalid bitmask"),
-                            },
-                            1,
-                        )
-                    });
+    if map.starts_with('.') || map.starts_with('?') {
+        //Starts with . or a ? treated as .
+        //Rest of the pattern has to fulfill all groups
+        let rest = map.get(1..).unwrap();
+        res += count(rest, groups);
+    }
 
-                    valid_pattern(&res, &line.groups)
-                })
-                .count()
-        })
-        .sum()
+    if map.starts_with('#') || map.starts_with('?') {
+        /* Starts with # or a ? treated as #
+        We need the first group, it has to fit in current run.
+        If it does, the rest can be evaluated,
+        otherwise we reached an end */
+        let curr_run = *groups.first().unwrap() as usize;
+        if curr_run <= map.len() //Current run must fit in input
+            && !(map.get(..curr_run).unwrap().contains('.'))
+        //There must not be a . in the current run
+        {
+            if curr_run == map.len() ||//Current run would fit
+                !map.get(curr_run..).unwrap().starts_with('#')
+            //Current run can be ended with . or ?
+            {
+                let rest = map.get(curr_run + 1..).unwrap_or(""); //Skip 1, cause it has to be the delimiter
+                let groups = groups.get(1..).unwrap_or(&[]);
+
+                res += count(rest, groups)
+            }
+        }
+    }
+
+    res
 }
 
-fn valid_pattern(map: &str, groups: &[u32]) -> bool {
-    let mut r = Vec::new();
-    let mut last = None;
-    let mut c: u32 = 0;
-    map.chars().for_each(|chr| {
-        match chr {
-            '.' => {
-                if let Some('#') = last {
-                    r.push(c);
-                    c = 0;
-                }
-            }
-            '#' => c += 1,
-            _ => (),
-        }
+fn solve(input: &str) -> u32 {
+    let (_, map) = parse_map(input).expect("Valid input");
 
-        last = Some(chr);
-    });
-    if map.ends_with('#') {
-        r.push(c);
-    }
-    let mtch = r.len() == groups.len() && r.iter().zip(groups.iter()).all(|(r, l)| *r == *l);
-
-    mtch
+    map.iter().map(|l| count(l.map, &l.groups)).sum()
 }
 
 fn parse_map(input: &str) -> IResult<&str, Vec<SpringMapLine>> {
@@ -144,5 +141,23 @@ mod tests {
     fn test_code_6() {
         let result = solve("?###???????? 3,2,1");
         assert_eq!(result, 10);
+    }
+
+    #[test]
+    fn test_code_7() {
+        let result = solve("???? 2,1");
+        assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn test_code_8() {
+        let result = solve("??? 2,1");
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn test_code_9() {
+        let result = solve("?? 2,1");
+        assert_eq!(result, 0);
     }
 }

@@ -1,3 +1,9 @@
+#[macro_use]
+extern crate lazy_static;
+
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use nom::{
     bytes::complete::{tag, take_until},
     character::complete,
@@ -5,13 +11,18 @@ use nom::{
     sequence::separated_pair,
     IResult,
 };
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use rayon::prelude::*;
 
 #[derive(PartialEq, Clone, Debug)]
 struct SpringMapLine {
     map: String,
-    groups: Vec<u128>,
+    groups: Vec<u64>,
+}
+
+lazy_static! {
+    static ref CACHE: Mutex<HashMap<(String, String), u64>> = {
+        let m = HashMap::new();
+        Mutex::new(m)
+    };
 }
 
 fn main() {
@@ -20,77 +31,77 @@ fn main() {
     dbg!(output);
 }
 
-fn solve(input: &str) -> usize {
+fn count(map: &str, groups: &[u64]) -> u64 {
+    if let Ok(mut cache) = CACHE.lock() {
+        if let Some(r) = cache.get(&(map.to_string(), format!("{groups:?}"))) {
+            return *r;
+        }
+    }
+
+    if map.is_empty() {
+        if groups.is_empty() {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+    if groups.is_empty() {
+        if map.contains('#') {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+    let mut res = 0;
+
+    if map.starts_with('.') || map.starts_with('?') {
+        //Starts with . or a ? treated as .
+        //Rest of the pattern has to fulfill all groups
+        let rest = map.get(1..).unwrap();
+        res += count(rest, groups);
+    }
+
+    if map.starts_with('#') || map.starts_with('?') {
+        /* Starts with # or a ? treated as #
+        We need the first group, it has to fit in current run.
+        If it does, the rest can be evaluated,
+        otherwise we reached an end */
+        let curr_run = *groups.first().unwrap() as usize;
+        if curr_run <= map.len() //Current run must fit in input
+            && !(map.get(..curr_run).unwrap().contains('.'))
+        //There must not be a . in the current run
+        {
+            if curr_run == map.len() ||//Current run would fit
+                !map.get(curr_run..).unwrap().starts_with('#')
+            //Current run can be ended with . or ?
+            {
+                let rest = map.get(curr_run + 1..).unwrap_or(""); //Skip 1, cause it has to be the delimiter
+                let groups = groups.get(1..).unwrap_or(&[]);
+
+                res += count(rest, groups)
+            }
+        }
+    }
+    if let Ok(mut cache) = CACHE.lock() {
+        cache.insert((map.to_string(), format!("{groups:?}")), res);
+    }
+    res
+}
+
+fn solve(input: &str) -> u64 {
     let (_, map) = parse_map(input).expect("Valid input");
 
-    map.iter()
-        .enumerate()
-        .map(|(e, line)| {
+    map.iter().map(|line| {
             let map = (0..5)
                 .map(|_| line.map.to_string())
                 .collect::<Vec<String>>()
                 .join("?");
-            let groups: Vec<u128> = (0..5).flat_map(|_| line.groups.clone()).collect();
-            (e, SpringMapLine { map, groups })
+            let groups: Vec<u64> = (0..5).flat_map(|_| line.groups.clone()).collect();
+            SpringMapLine { map, groups }
         })
-        .map(|(e, line)| {
-            println!("Line: {e}");
-            line
-        })
-        .map(|line| {
-            let placeholders = line.map.chars().filter(|c| *c == '?').count();
-            let hashs = line.map.chars().filter(|c| *c == '#').count();
-            let group_sum = line.groups.iter().sum::<u128>() as usize;
-            let max_options = 2u128.pow(placeholders as u32);
-
-            (0..max_options)
-                .into_par_iter()
-                .map(|p| format!("{p:0>width$b}", width = placeholders))
-                .filter(|mask| mask.chars().filter(|c| *c == '1').count() + hashs == group_sum)
-                .filter(|mask| {
-                    let res = mask.chars().fold(line.map.to_string(), |acc, c| {
-                        acc.replacen(
-                            '?',
-                            match c {
-                                '1' => "#",
-                                '0' => ".",
-                                _ => panic!("Invalid bitmask"),
-                            },
-                            1,
-                        )
-                    });
-
-                    valid_pattern(&res, &line.groups)
-                })
-                .count()
-        })
+        .map(|l| count(&l.map, &l.groups))
         .sum()
-}
-
-fn valid_pattern(map: &str, groups: &[u128]) -> bool {
-    let mut r = Vec::new();
-    let mut last = None;
-    let mut c: u128 = 0;
-    map.chars().for_each(|chr| {
-        match chr {
-            '.' => {
-                if let Some('#') = last {
-                    r.push(c);
-                    c = 0;
-                }
-            }
-            '#' => c += 1,
-            _ => (),
-        }
-
-        last = Some(chr);
-    });
-    if map.ends_with('#') {
-        r.push(c);
-    }
-    let mtch = r.len() == groups.len() && r.iter().zip(groups.iter()).all(|(r, l)| *r == *l);
-
-    mtch
 }
 
 fn parse_map(input: &str) -> IResult<&str, Vec<SpringMapLine>> {
@@ -103,7 +114,7 @@ fn parse_line(input: &str) -> IResult<&str, SpringMapLine> {
     let (input, (map, groups)) = separated_pair(
         take_until(" "),
         tag(" "),
-        separated_list1(tag(","), complete::u128),
+        separated_list1(tag(","), complete::u64),
     )(input)?;
     let map = map.to_string();
     Ok((&input, SpringMapLine { map, groups }))
