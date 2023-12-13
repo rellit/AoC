@@ -1,5 +1,5 @@
 use nom::{
-    bytes::complete::{tag, take_until},
+    bytes::complete::{tag, take_until, take_until1},
     multi::separated_list1,
     IResult,
 };
@@ -21,10 +21,7 @@ fn solve(input: &str) -> usize {
 
     map.iter()
         .map(|picture| {
-            println!("{picture:?}");
-
             if let Some(h) = maps_horizontal_at(picture) {
-                println!("Matches horizontal at {h}");
                 h * 100
             } else {
                 maps_vertical_at(picture).expect("Should reflect in either dir")
@@ -36,14 +33,14 @@ fn solve(input: &str) -> usize {
 fn maps_horizontal_at(picture: &[&str]) -> Option<usize> {
     for n in 0..picture.len() - 1 {
         //n means potential Split after row n
-        println!("{n}");
+        // println!("{n}");
         let mut matches = true;
         for cmp in (0..n + 1).rev() {
-            println!(
-                "Schould compare {l} with {r}",
-                l = cmp,
-                r = (2 * n + 1) - cmp
-            );
+            // println!(
+            //     "Schould compare {l} with {r}",
+            //     l = cmp,
+            //     r = (2 * n + 1) - cmp
+            // );
 
             let l = picture.get(cmp);
             let r = picture.get((2 * n + 1) - cmp);
@@ -74,14 +71,14 @@ fn maps_horizontal_at(picture: &[&str]) -> Option<usize> {
 fn maps_vertical_at(picture: &[&str]) -> Option<usize> {
     for n in 0..picture.first().unwrap().len() - 1 {
         //n means potential Split after row n
-        println!("{n}");
+        // println!("{n}");
         let mut matches = true;
         for cmp in (0..n + 1).rev() {
-            println!(
-                "Schould compare {l} with {r}",
-                l = cmp,
-                r = (2 * n + 1) - cmp
-            );
+            // println!(
+            //     "Schould compare {l} with {r}",
+            //     l = cmp,
+            //     r = (2 * n + 1) - cmp
+            // );
 
             if !picture
                 .iter()
@@ -91,7 +88,7 @@ fn maps_vertical_at(picture: &[&str]) -> Option<usize> {
                     (l, r)
                 })
                 .all(|(l, r)| {
-                    println!("Compare {l:?} - {r:?}");
+                    // println!("Compare {l:?} - {r:?}");
                     l.is_none() || r.is_none() || l.unwrap().1 == r.unwrap().1
                 })
             {
@@ -118,7 +115,7 @@ fn maps_vertical_at(picture: &[&str]) -> Option<usize> {
 
 fn parse_input(input: &str) -> IResult<&str, Vec<Vec<&str>>> {
     let (input, lines) =
-        separated_list1(tag("\n\n"), separated_list1(tag("\n"), take_until("\n")))(input)?;
+        separated_list1(tag("\n\n"), separated_list1(tag("\n"), take_until1("\n")))(input)?;
 
     Ok((&input, lines))
 }
