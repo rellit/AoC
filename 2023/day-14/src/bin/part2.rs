@@ -1,4 +1,33 @@
-use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
+use std::collections::HashMap;
+
+#[derive(Clone, Debug, PartialEq)]
+enum Rock {
+    Stable,
+    Movable,
+}
+
+#[derive(Clone, Debug)]
+struct Mirror {
+    w: usize,
+    h: usize,
+    rocks: HashMap<(usize, usize), Rock>,
+}
+
+impl Mirror {
+    fn _print(&self) {
+        for y in 0..self.h {
+            for x in 0..self.w {
+                match self.rocks.get(&(x, y)) {
+                    Some(Rock::Movable) => print!("O"),
+                    Some(Rock::Stable) => print!("#"),
+                    None => print!("."),
+                }
+            }
+            println!();
+        }
+    }
+}
+
 fn main() {
     let input = include_str!("../input.txt");
     let output = solve(input);
@@ -6,127 +35,185 @@ fn main() {
 }
 
 fn solve(input: &str) -> usize {
-    let mut lines = parse_input(input);
+    let mut mirror = parse_input(input);
 
-    let mut last_res = lines.clone();
+    let mut last_res = Vec::new();
 
-    for n in 0..1_000_000_000 {
-        if n % 100 == 0 {
-            println!("Round {n}");
+    loop {
+        mirror = north(mirror);
+        mirror = west(mirror);
+        mirror = south(mirror);
+        mirror = east(mirror);
+
+        let last = value(&mirror);
+
+        if let Some((i1, i2)) = loops(&last_res, last) {
+            return *last_res.get(1_000_000_000 % (i2 + 1 - i1) + i1).unwrap();
         }
 
-        lines = north(lines);
-        lines = west(lines);
-        lines = south(lines);
-        lines = east(lines);
-
-        if last_res.cmp(&lines).is_eq() {
-            break;
-        }
-
-        last_res = lines.clone();
+        last_res.push(last);
     }
+}
 
-    lines
+fn loops(list: &[usize], loop_candidate: usize) -> Option<(usize, usize)> {
+    let idx: Vec<usize> = list
         .iter()
-        .rev()
         .enumerate()
-        .map(|(i, l)| {
-            println!("{l}  {i:3}", i = i + 1);
+        .filter(|(_, &r)| r == loop_candidate)
+        .map(|(idx, _)| idx)
+        .collect();
 
-            l.chars().filter(|c| *c == 'O').count() * (i + 1)
+    if idx.len() != 10 {
+        return None;
+    }
+
+    let mut i = idx.iter().rev();
+    let i2 = i.next().unwrap();
+    let i1 = i.next().unwrap();
+
+    let first = list.get(*i1..*i2).unwrap();
+    let tail = list.get(*i2..).unwrap();
+    if first.eq(tail) {
+        Some((*i1, *i2))
+    } else {
+        None
+    }
+}
+
+fn value(mirror: &Mirror) -> usize {
+    let mut res = 0;
+
+    (0..mirror.h).rev().enumerate().for_each(|(i, y)| {
+        (0..mirror.w).for_each(|x| {
+            if let Some(Rock::Movable) = mirror.rocks.get(&(x, y)) {
+                res += i + 1;
+            }
+        });
+    });
+
+    res
+}
+
+fn east(mut mirror: Mirror) -> Mirror {
+    (0..mirror.h).for_each(|y| {
+        let mut target_pos = None;
+        (0..mirror.w)
+            .rev()
+            .for_each(|x| match mirror.rocks.get(&(x, y)) {
+                None => {
+                    if target_pos.is_none() {
+                        target_pos = Some((x, y))
+                    }
+                }
+
+                Some(Rock::Movable) => match target_pos {
+                    None => {}
+                    Some((x_target, y_target)) => {
+                        mirror.rocks.insert((x_target, y_target), Rock::Movable);
+                        mirror.rocks.remove(&(x, y));
+                        target_pos = Some((x.max(x_target - 1), y));
+                    }
+                },
+                Some(Rock::Stable) => target_pos = None,
+            });
+    });
+    mirror
+}
+
+fn west(mut mirror: Mirror) -> Mirror {
+    (0..mirror.h).for_each(|y| {
+        let mut target_pos = None;
+        (0..mirror.w).for_each(|x| match mirror.rocks.get(&(x, y)) {
+            None => {
+                if target_pos.is_none() {
+                    target_pos = Some((x, y))
+                }
+            }
+
+            Some(Rock::Movable) => match target_pos {
+                None => {}
+                Some((x_target, y_target)) => {
+                    mirror.rocks.insert((x_target, y_target), Rock::Movable);
+                    mirror.rocks.remove(&(x, y));
+                    target_pos = Some((x.min(x_target + 1), y));
+                }
+            },
+            Some(Rock::Stable) => target_pos = None,
+        });
+    });
+    mirror
+}
+
+fn north(mut mirror: Mirror) -> Mirror {
+    (0..mirror.w).for_each(|x| {
+        let mut target_pos = None;
+        (0..mirror.h).for_each(|y| match mirror.rocks.get(&(x, y)) {
+            None => {
+                if target_pos.is_none() {
+                    target_pos = Some((x, y))
+                }
+            }
+
+            Some(Rock::Movable) => match target_pos {
+                None => {}
+                Some((x_target, y_target)) => {
+                    mirror.rocks.insert((x_target, y_target), Rock::Movable);
+                    mirror.rocks.remove(&(x, y));
+                    target_pos = Some((x, y.min(y_target + 1)));
+                }
+            },
+            Some(Rock::Stable) => target_pos = None,
+        });
+    });
+
+    mirror
+}
+
+fn south(mut mirror: Mirror) -> Mirror {
+    (0..mirror.w).for_each(|x| {
+        let mut target_pos = None;
+        (0..mirror.h)
+            .rev()
+            .for_each(|y| match mirror.rocks.get(&(x, y)) {
+                None => {
+                    if target_pos.is_none() {
+                        target_pos = Some((x, y))
+                    }
+                }
+
+                Some(Rock::Movable) => match target_pos {
+                    None => {}
+                    Some((x_target, y_target)) => {
+                        mirror.rocks.insert((x_target, y_target), Rock::Movable);
+                        mirror.rocks.remove(&(x, y));
+                        target_pos = Some((x, y.max(y_target - 1)));
+                    }
+                },
+                Some(Rock::Stable) => target_pos = None,
+            });
+    });
+
+    mirror
+}
+
+fn parse_input(input: &str) -> Mirror {
+    let mut w = 0;
+    let mut h = 0;
+    let mut rocks = HashMap::new();
+    input.lines().enumerate().for_each(|(y, l)| {
+        l.chars().enumerate().for_each(|(x, c)| {
+            match c {
+                '#' => rocks.insert((x, y), Rock::Stable),
+                'O' => rocks.insert((x, y), Rock::Movable),
+                '.' => None,
+                _ => panic!("Unknown input"),
+            };
+            w = w.max(x + 1);
+            h = h.max(y + 1);
         })
-        .sum()
-}
-
-fn east(mut lines: Vec<String>) -> Vec<String> {
-    lines.par_iter_mut().for_each(|l| {
-        while l.contains("O..") {
-            *l = l.replace("O..", "..O");
-        }
-        while l.contains("O.") {
-            *l = l.replace("O.", ".O");
-        }
     });
-    lines
-}
 
-fn west(mut lines: Vec<String>) -> Vec<String> {
-    lines.par_iter_mut().for_each(|l| {
-        while l.contains("..O") {
-            *l = l.replace("..O", "O..");
-        }
-        while l.contains(".O") {
-            *l = l.replace(".O", "O.");
-        }
-    });
-    lines
-}
-
-fn north(mut lines: Vec<String>) -> Vec<String> {
-    loop {
-        let mut shifted = false;
-        for n in 0..lines.len() - 1 {
-            let mut new_upper = "".to_string();
-            let mut new_curr = "".to_string();
-            lines
-                .get(n)
-                .unwrap()
-                .chars()
-                .zip(lines.get(n + 1).unwrap().chars())
-                .for_each(|(u, c)| {
-                    if u == '.' && c == 'O' {
-                        shifted = true;
-                        new_upper.push('O');
-                        new_curr.push('.');
-                    } else {
-                        new_upper.push(u);
-                        new_curr.push(c);
-                    }
-                });
-            *lines.get_mut(n).unwrap() = new_upper;
-            *lines.get_mut(n + 1).unwrap() = new_curr;
-        }
-        if !shifted {
-            break;
-        }
-    }
-    lines
-}
-
-fn south(mut lines: Vec<String>) -> Vec<String> {
-    loop {
-        let mut shifted = false;
-        for n in 0..lines.len() - 1 {
-            let mut new_upper = "".to_string();
-            let mut new_curr = "".to_string();
-            lines
-                .get(n)
-                .unwrap()
-                .chars()
-                .zip(lines.get(n + 1).unwrap().chars())
-                .for_each(|(u, c)| {
-                    if u == 'O' && c == '.' {
-                        shifted = true;
-                        new_upper.push('.');
-                        new_curr.push('O');
-                    } else {
-                        new_upper.push(u);
-                        new_curr.push(c);
-                    }
-                });
-            *lines.get_mut(n).unwrap() = new_upper;
-            *lines.get_mut(n + 1).unwrap() = new_curr;
-        }
-        if !shifted {
-            break;
-        }
-    }
-    lines
-}
-
-fn parse_input(input: &str) -> Vec<String> {
-    input.lines().map(|l| l.to_string()).collect()
+    Mirror { rocks, w, h }
 }
 
 #[cfg(test)]

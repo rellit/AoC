@@ -1,3 +1,33 @@
+use std::collections::HashMap;
+
+#[derive(Clone, Debug, PartialEq)]
+enum Rock {
+    Stable,
+    Movable,
+}
+
+#[derive(Clone, Debug)]
+struct Mirror {
+    w: usize,
+    h: usize,
+    rocks: HashMap<(usize, usize), Rock>,
+}
+
+impl Mirror {
+    fn _print(&self) {
+        for y in 0..self.h {
+            for x in 0..self.w {
+                match self.rocks.get(&(x, y)) {
+                    Some(Rock::Movable) => print!("O"),
+                    Some(Rock::Stable) => print!("#"),
+                    None => print!("."),
+                }
+            }
+            println!();
+        }
+    }
+}
+
 fn main() {
     let input = include_str!("../input.txt");
     let output = solve(input);
@@ -5,46 +35,70 @@ fn main() {
 }
 
 fn solve(input: &str) -> usize {
-    let mut lines = parse_input(input);
+    let mut mirror = parse_input(input);
 
-    loop {
-        let mut shifted = false;
-        for n in 0..lines.len() - 1 {
-            let mut new_upper = "".to_string();
-            let mut new_curr = "".to_string();
-            lines
-                .get(n)
-                .unwrap()
-                .chars()
-                .zip(lines.get(n + 1).unwrap().chars())
-                .for_each(|(u, c)| {
-                    if u == '.' && c == 'O' {
-                        shifted = true;
-                        new_upper.push('O');
-                        new_curr.push('.');
-                    } else {
-                        new_upper.push(u);
-                        new_curr.push(c);
-                    }
-                });
-            *lines.get_mut(n).unwrap() = new_upper;
-            *lines.get_mut(n + 1).unwrap() = new_curr;
-        }
-        if !shifted {
-            break;
-        }
-    }
+    mirror = north(mirror);
 
-    lines
-        .iter()
-        .rev()
-        .enumerate()
-        .map(|(i, l)| l.chars().filter(|c| *c == 'O').count() * (i + 1))
-        .sum()
+    value(&mirror)
 }
 
-fn parse_input(input: &str) -> Vec<String> {
-    input.lines().map(|l| l.to_string()).collect()
+fn value(mirror: &Mirror) -> usize {
+    let mut res = 0;
+
+    (0..mirror.h).rev().enumerate().for_each(|(i, y)| {
+        (0..mirror.w).for_each(|x| {
+            if let Some(Rock::Movable) = mirror.rocks.get(&(x, y)) {
+                res += i + 1;
+            }
+        });
+    });
+
+    res
+}
+
+fn north(mut mirror: Mirror) -> Mirror {
+    (0..mirror.w).for_each(|x| {
+        let mut target_pos = None;
+        (0..mirror.h).for_each(|y| match mirror.rocks.get(&(x, y)) {
+            None => {
+                if target_pos.is_none() {
+                    target_pos = Some((x, y))
+                }
+            }
+
+            Some(Rock::Movable) => match target_pos {
+                None => {}
+                Some((x_target, y_target)) => {
+                    mirror.rocks.insert((x_target, y_target), Rock::Movable);
+                    mirror.rocks.remove(&(x, y));
+                    target_pos = Some((x, y.min(y_target + 1)));
+                }
+            },
+            Some(Rock::Stable) => target_pos = None,
+        });
+    });
+
+    mirror
+}
+
+fn parse_input(input: &str) -> Mirror {
+    let mut w = 0;
+    let mut h = 0;
+    let mut rocks = HashMap::new();
+    input.lines().enumerate().for_each(|(y, l)| {
+        l.chars().enumerate().for_each(|(x, c)| {
+            match c {
+                '#' => rocks.insert((x, y), Rock::Stable),
+                'O' => rocks.insert((x, y), Rock::Movable),
+                '.' => None,
+                _ => panic!("Unknown input"),
+            };
+            w = w.max(x + 1);
+            h = h.max(y + 1);
+        })
+    });
+
+    Mirror { rocks, w, h }
 }
 
 #[cfg(test)]
