@@ -120,7 +120,7 @@ impl Map {
                 }
             }
 
-            let tile = match p {
+            match p {
                 3 => &Tile::NE,
                 5 => &Tile::NS,
                 9 => &Tile::NW,
@@ -128,8 +128,7 @@ impl Map {
                 10 => &Tile::EW,
                 12 => &Tile::SW,
                 _ => &Tile::None,
-            };
-            tile
+            }
         } else {
             t
         }

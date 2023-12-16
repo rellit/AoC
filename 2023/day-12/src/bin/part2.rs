@@ -32,7 +32,7 @@ fn main() {
 }
 
 fn count(map: &str, groups: &[u64]) -> u64 {
-    if let Ok(mut cache) = CACHE.lock() {
+    if let Ok(cache) = CACHE.lock() {
         if let Some(r) = cache.get(&(map.to_string(), format!("{groups:?}"))) {
             return *r;
         }
@@ -71,16 +71,14 @@ fn count(map: &str, groups: &[u64]) -> u64 {
         if curr_run <= map.len() //Current run must fit in input
             && !(map.get(..curr_run).unwrap().contains('.'))
         //There must not be a . in the current run
+        && (curr_run == map.len() ||//Current run would fit
+                !map.get(curr_run..).unwrap().starts_with('#'))
+        //Current run can be ended with . or ?
         {
-            if curr_run == map.len() ||//Current run would fit
-                !map.get(curr_run..).unwrap().starts_with('#')
-            //Current run can be ended with . or ?
-            {
-                let rest = map.get(curr_run + 1..).unwrap_or(""); //Skip 1, cause it has to be the delimiter
-                let groups = groups.get(1..).unwrap_or(&[]);
+            let rest = map.get(curr_run + 1..).unwrap_or(""); //Skip 1, cause it has to be the delimiter
+            let groups = groups.get(1..).unwrap_or(&[]);
 
-                res += count(rest, groups)
-            }
+            res += count(rest, groups)
         }
     }
     if let Ok(mut cache) = CACHE.lock() {
@@ -92,7 +90,8 @@ fn count(map: &str, groups: &[u64]) -> u64 {
 fn solve(input: &str) -> u64 {
     let (_, map) = parse_map(input).expect("Valid input");
 
-    map.iter().map(|line| {
+    map.iter()
+        .map(|line| {
             let map = (0..5)
                 .map(|_| line.map.to_string())
                 .collect::<Vec<String>>()

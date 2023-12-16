@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 fn main() {
     let input = include_str!("../input.txt");
     let output = solve(input);
