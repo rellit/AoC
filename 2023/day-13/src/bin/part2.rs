@@ -1,6 +1,5 @@
 use nom::{
-    bytes::complete::{is_a, tag, take_until1},
-    character::complete::one_of,
+    bytes::complete::{is_a, tag},
     multi::separated_list1,
     IResult,
 };
@@ -22,6 +21,19 @@ fn solve(input: &str) -> usize {
 
     map.iter()
         .map(|picture| {
+            let picture: Vec<String> = picture
+                .clone()
+                .iter()
+                .map(|line| line.to_string())
+                .collect();
+
+            let mut old = 0;
+            if let Some(h) = maps_horizontal_at(&picture) {
+                old = h * 100;
+            } else if let Some(h) = maps_vertical_at(&picture) {
+                old = h;
+            };
+
             let mut new = 0;
             for n in 0..picture.len() * picture.first().unwrap().len() {
                 let mod_picture: Vec<String> = picture
@@ -49,15 +61,19 @@ fn solve(input: &str) -> usize {
                         }
                     })
                     .collect();
-                dbg!(picture);
+                dbg!(&picture);
                 dbg!(&mod_picture);
 
                 if let Some(h) = maps_horizontal_at(&mod_picture) {
                     new = h * 100;
-                    break;
+                    if new != old {
+                        break;
+                    }
                 } else if let Some(h) = maps_vertical_at(&mod_picture) {
                     new = h;
-                    break;
+                    if new != old {
+                        break;
+                    }
                 };
             }
             new
@@ -196,8 +212,7 @@ mod tests {
 
     #[test]
     fn test_code_2() {
-        let result = solve(
-            "#...##..#
+        let result = solve("#...##..#
 #....#..#
 ..##..###
 #####.##.
