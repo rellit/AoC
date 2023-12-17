@@ -130,23 +130,14 @@ fn _print_map(x_max: usize, y_max: usize, map: &Map) {
     }
 }
 
-fn energize(map: &mut Map, mut curr_pos: IVec2, direction: IVec2) {
-    while let Some(tile) = map.get_mut(&curr_pos) {
+fn energize(map: &mut Map, curr_pos: IVec2, direction: IVec2) {
+    if let Some(tile) = map.get_mut(&curr_pos) {
         if tile.energized_from(direction) {
             return;
         }
-
         tile.energize_from(direction);
-        if tile.kind == TileKind::Empty {
-            curr_pos += direction;
-        } else {
-            break;
-        }
-    }
-
-    if let Some(tile) = map.get_mut(&curr_pos) {
         match tile.kind {
-            TileKind::Empty => {}
+            TileKind::Empty => energize(map, curr_pos + direction, direction),
             TileKind::Ver => match direction {
                 LEFT | RIGHT => {
                     energize(map, curr_pos + UP, UP);
