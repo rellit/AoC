@@ -1,5 +1,6 @@
 use nom::{
-    bytes::complete::{tag, take_until1},
+    bytes::complete::{is_a, tag, take_until1},
+    character::complete::one_of,
     multi::separated_list1,
     IResult,
 };
@@ -23,10 +24,38 @@ fn solve(input: &str) -> usize {
         .map(|picture| {
             let mut new = 0;
             for n in 0..picture.len() * picture.first().unwrap().len() {
-                if let Some(h) = maps_horizontal_at(picture, n) {
+                let mod_picture: Vec<String> = picture
+                    .clone()
+                    .iter()
+                    .enumerate()
+                    .map(|(row, line)| {
+                        if n / picture.first().unwrap().len() == row {
+                            line.chars()
+                                .enumerate()
+                                .map(|(i, c)| {
+                                    if i == n % picture.first().unwrap().len() {
+                                        match c {
+                                            '#' => '.',
+                                            '.' => '#',
+                                            _ => panic!("Wrong char"),
+                                        }
+                                    } else {
+                                        c
+                                    }
+                                })
+                                .collect()
+                        } else {
+                            line.to_string()
+                        }
+                    })
+                    .collect();
+                dbg!(picture);
+                dbg!(&mod_picture);
+
+                if let Some(h) = maps_horizontal_at(&mod_picture) {
                     new = h * 100;
                     break;
-                } else if let Some(h) = maps_vertical_at(picture, n) {
+                } else if let Some(h) = maps_vertical_at(&mod_picture) {
                     new = h;
                     break;
                 };
@@ -36,33 +65,20 @@ fn solve(input: &str) -> usize {
         .sum()
 }
 
-fn maps_horizontal_at(picture: &[&str], switch: usize) -> Option<usize> {
+fn maps_horizontal_at(picture: &[String]) -> Option<usize> {
     for n in 0..picture.len() - 1 {
         //n means potential Split after row n
         // println!("{n}");
         let mut matches = true;
         for cmp in (0..n + 1).rev() {
-            // println!(
-            //     "Schould compare {l} with {r}",
-            //     l = cmp,
-            //     r = (2 * n + 1) - cmp
-            // );
+            let l = picture.get(cmp);
 
-            let mut l = picture.get(cmp);
-            if l.is_some() && n * cmp + cmp == switch {
-                println!("Switch {l:?}");
-                l = match *l.unwrap() {
-                    "." => Some(&"#"),
-                    "#" => Some(&"."),
-                    _ => l,
-                };
-
-                println!("To {l:?}");
-            }
             let r = picture.get((2 * n + 1) - cmp);
-            if l.is_none() || r.is_none() {
+            dbg!(l, r);
+
+            if l.is_none() {
                 break;
-            } else if l.unwrap() != r.unwrap() {
+            } else if r.is_none() || l.unwrap() != r.unwrap() {
                 matches = false;
                 break;
             }
@@ -84,7 +100,7 @@ fn maps_horizontal_at(picture: &[&str], switch: usize) -> Option<usize> {
     None
 }
 
-fn maps_vertical_at(picture: &[&str], switch: usize) -> Option<usize> {
+fn maps_vertical_at(picture: &[String]) -> Option<usize> {
     for n in 0..picture.first().unwrap().len() - 1 {
         //n means potential Split after row n
         // println!("{n}");
@@ -106,18 +122,8 @@ fn maps_vertical_at(picture: &[&str], switch: usize) -> Option<usize> {
                 })
                 .all(|(l, r)| {
                     // println!("Compare {l:?} - {r:?}");
-                    let mut c = l;
-                    if c.is_some() && n * cmp + cmp == switch {
-                        println!("Switch {c:?}");
-                        c = match c.unwrap().1 {
-                            '.' => Some((l.unwrap().0, '#')),
-                            '#' => Some((l.unwrap().0, '.')),
-                            _ => l,
-                        };
-                        println!("To {c:?}");
-                    }
 
-                    c.is_none() || r.is_none() || c.unwrap().1 == r.unwrap().1
+                    l.is_none() || r.is_none() || l.unwrap().1 == r.unwrap().1
                 })
             {
                 matches = false;
@@ -143,7 +149,7 @@ fn maps_vertical_at(picture: &[&str], switch: usize) -> Option<usize> {
 
 fn parse_input(input: &str) -> IResult<&str, Vec<Vec<&str>>> {
     let (input, lines) =
-        separated_list1(tag("\n\n"), separated_list1(tag("\n"), take_until1("\n")))(input)?;
+        separated_list1(tag("\n\n"), separated_list1(tag("\n"), is_a(".#")))(input)?;
 
     Ok((&input, lines))
 }
@@ -171,7 +177,7 @@ mod tests {
 ..##..###
 #....#..#",
         );
-        assert_eq!(result, 405);
+        assert_eq!(result, 400);
     }
 
     #[test]
@@ -185,7 +191,7 @@ mod tests {
 ..##..##.
 #.#.##.#.",
         );
-        assert_eq!(result, 5);
+        assert_eq!(result, 300);
     }
 
     #[test]
@@ -199,6 +205,6 @@ mod tests {
 ..##..###
 #....#..#",
         );
-        assert_eq!(result, 400);
+        assert_eq!(result, 100);
     }
 }
